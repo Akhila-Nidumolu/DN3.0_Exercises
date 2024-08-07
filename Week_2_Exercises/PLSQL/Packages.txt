@@ -1,0 +1,216 @@
+Case 1: Group all customer-related procedures and functions into a package.
+o Question: Create a package CustomerManagement with procedures for adding a new customer, updating customer details, and a function to get customer balance.
+CODE:
+Package specification
+CREATE OR REPLACE PACKAGE CustomerManagement AS
+    PROCEDURE AddCustomer (
+        p_customer_id IN NUMBER,
+        p_name IN VARCHAR2,
+        p_address IN VARCHAR2
+    );
+    PROCEDURE UpdateCustomer (
+        p_customer_id IN NUMBER,
+        p_name IN VARCHAR2,
+        p_address IN VARCHAR2
+    );
+    FUNCTION GetCustomerBalance (
+        p_customer_id IN NUMBER
+    ) RETURN NUMBER;
+END CustomerManagement;
+/
+Package Body
+CREATE OR REPLACE PACKAGE BODY CustomerManagement AS
+    PROCEDURE AddCustomer (
+        p_customer_id IN NUMBER,
+        p_name IN VARCHAR2,
+        p_address IN VARCHAR2
+    ) IS
+    BEGIN
+        INSERT INTO CUSTOMERS (CUSTOMER_ID, NAME, ADDRESS)
+        VALUES (p_customer_id, p_name, p_address);
+    EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Customer ID already exists.');
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Error adding customer: ' || SQLERRM);
+    END AddCustomer;
+    PROCEDURE UpdateCustomer (
+        p_customer_id IN NUMBER,
+        p_name IN VARCHAR2,
+        p_address IN VARCHAR2
+    ) IS
+    BEGIN
+        UPDATE CUSTOMERS
+        SET NAME = p_name,
+            ADDRESS = p_address
+        WHERE CUSTOMER_ID = p_customer_id;
+       IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20003, 'Customer ID not found.');
+        END IF;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20004, 'Error updating customer: ' || SQLERRM);
+    END UpdateCustomer;
+    FUNCTION GetCustomerBalance (
+        p_customer_id IN NUMBER
+    ) RETURN NUMBER IS
+        v_balance NUMBER;
+    BEGIN
+        SELECT SUM(BALANCE) INTO v_balance
+        FROM ACCOUNTS
+        WHERE CUSTOMER_ID = p_customer_id;
+
+        RETURN v_balance;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN 0;
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20005, 'Error retrieving customer balance: ' || SQLERRM);
+    END GetCustomerBalance;
+END CustomerManagement;
+/
+Case 2: Create a package to manage employee data.
+o Question: Write a package EmployeeManagement with procedures to hire new employees, update employee details, and a function to calculate annual salary.
+
+CODE:
+Package Specification
+CREATE OR REPLACE PACKAGE EmployeeManagement AS
+    PROCEDURE HireEmployee (
+        p_employee_id IN NUMBER,
+        p_name IN VARCHAR2,
+        p_salary IN NUMBER,
+        p_department IN VARCHAR2
+    );
+    PROCEDURE UpdateEmployee (
+        p_employee_id IN NUMBER,
+        p_name IN VARCHAR2,
+        p_salary IN NUMBER,
+        p_department IN VARCHAR2
+    );
+    FUNCTION CalculateAnnualSalary (
+        p_employee_id IN NUMBER
+    ) RETURN NUMBER;
+END EmployeeManagement;
+/
+Package Body
+CREATE OR REPLACE PACKAGE BODY EmployeeManagement AS
+    PROCEDURE HireEmployee (
+        p_employee_id IN NUMBER,
+        p_name IN VARCHAR2,
+        p_salary IN NUMBER,
+        p_department IN VARCHAR2
+    ) IS
+    BEGIN
+        INSERT INTO EMPLOYEES (EMPLOYEE_ID, NAME, SALARY, DEPARTMENT)
+        VALUES (p_employee_id, p_name, p_salary, p_department);
+    EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Employee ID already exists.');
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Error hiring employee: ' || SQLERRM);
+    END HireEmployee;
+    PROCEDURE UpdateEmployee (
+        p_employee_id IN NUMBER,
+        p_name IN VARCHAR2,
+        p_salary IN NUMBER,
+        p_department IN VARCHAR2
+    ) IS
+    BEGIN
+        UPDATE EMPLOYEES
+        SET NAME = p_name,
+            SALARY = p_salary,
+            DEPARTMENT = p_department
+        WHERE EMPLOYEE_ID = p_employee_id;
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20003, 'Employee ID not found.');
+        END IF;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20004, 'Error updating employee: ' || SQLERRM);
+    END UpdateEmployee;
+    FUNCTION CalculateAnnualSalary (
+        p_employee_id IN NUMBER
+    ) RETURN NUMBER IS
+        v_salary NUMBER;
+    BEGIN
+        SELECT SALARY INTO v_salary
+        FROM EMPLOYEES
+        WHERE EMPLOYEE_ID = p_employee_id;
+        RETURN v_salary * 12; -- Assuming monthly salary
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN 0;
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20005, 'Error calculating annual salary: ' || SQLERRM);
+    END CalculateAnnualSalary;
+END EmployeeManagement;
+/
+Case 3: Group all account-related operations into a package.
+o Question: Create a package AccountOperations with procedures for opening a new account, closing an account, and a function to get the total balance of a customer across all accounts.
+CODE:
+Package specification
+CREATE OR REPLACE PACKAGE AccountOperations AS
+    PROCEDURE OpenAccount (
+        p_account_id IN NUMBER,
+        p_customer_id IN NUMBER,
+        p_initial_balance IN NUMBER
+    );
+    PROCEDURE CloseAccount (
+        p_account_id IN NUMBER
+    );
+
+    FUNCTION GetTotalBalance (
+        p_customer_id IN NUMBER
+    ) RETURN NUMBER;
+END AccountOperations;
+/
+Package Body
+CREATE OR REPLACE PACKAGE BODY AccountOperations AS
+    PROCEDURE OpenAccount (
+        p_account_id IN NUMBER,
+        p_customer_id IN NUMBER,
+        p_initial_balance IN NUMBER
+    ) IS
+    BEGIN
+        INSERT INTO ACCOUNTS (ACCOUNT_ID, CUSTOMER_ID, BALANCE)
+        VALUES (p_account_id, p_customer_id, p_initial_balance);
+    EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Account ID already exists.');
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Error opening account: ' || SQLERRM);
+    END OpenAccount;
+    PROCEDURE CloseAccount (
+        p_account_id IN NUMBER
+    ) IS
+    BEGIN
+        DELETE FROM ACCOUNTS
+        WHERE ACCOUNT_ID = p_account_id;
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20003, 'Account ID not found.');
+        END IF;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20004, 'Error closing account: ' || SQLERRM);
+    END CloseAccount;
+    FUNCTION GetTotalBalance (
+        p_customer_id IN NUMBER
+    ) RETURN NUMBER IS
+        v_total_balance NUMBER;
+    BEGIN
+        SELECT SUM(BALANCE) INTO v_total_balance
+        FROM ACCOUNTS
+        WHERE CUSTOMER_ID = p_customer_id;
+        RETURN v_total_balance;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN 0;
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20005, 'Error retrieving total balance: ' || SQLERRM);
+    END GetTotalBalance;
+END AccountOperations;
+/
+
+
+
+

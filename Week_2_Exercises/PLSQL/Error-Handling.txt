@@ -1,0 +1,124 @@
+Case 1: Handle exceptions during fund transfers between accounts.
+o Question: Write a stored procedure SafeTransferFunds that transfers funds between two accounts. Ensure that if any error occurs (e.g., insufficient funds), an appropriate error message is logged and the transaction is rolled back.
+Code : 
+CREATE OR REPLACE PROCEDURE SafeTransferFunds (
+    p_from_account_id IN ACCOUNTS.ACCOUNT_ID%TYPE,
+    p_to_account_id IN ACCOUNTS.ACCOUNT_ID%TYPE,
+    p_amount IN NUMBER
+) IS
+    v_from_balance ACCOUNTS.BALANCE%TYPE;
+    v_to_balance ACCOUNTS.BALANCE%TYPE;
+    -- Custom exception for insufficient funds
+    insufficient_funds EXCEPTION;
+    PRAGMA EXCEPTION_INIT(insufficient_funds, -20001);
+    -- Procedure to log errors
+    PROCEDURE LogError(p_error_message IN VARCHAR2) IS
+    BEGIN
+        INSERT INTO ERROR_LOG (LOG_ID, ERROR_MESSAGE, LOG_DATE)
+        VALUES (ERROR_LOG_SEQ.NEXTVAL, p_error_message, SYSDATE);
+    END LogError; 
+BEGIN
+    -- Lock the rows for the two accounts to prevent concurrent updates
+    SELECT BALANCE INTO v_from_balance
+    FROM ACCOUNTS
+    WHERE ACCOUNT_ID = p_from_account_id
+    FOR UPDATE;
+    SELECT BALANCE INTO v_to_balance
+    FROM ACCOUNTS
+    WHERE ACCOUNT_ID = p_to_account_id
+    FOR UPDATE;
+    -- Check if the from account has sufficient funds
+    IF v_from_balance < p_amount THEN
+        RAISE insufficient_funds;
+    END IF;
+        -- Perform the fund transfer
+    UPDATE ACCOUNTS
+    SET BALANCE = BALANCE - p_amount
+    WHERE ACCOUNT_ID = p_from_account_id;
+    UPDATE ACCOUNTS
+    SET BALANCE = BALANCE + p_amount
+    WHERE ACCOUNT_ID = p_to_account_id;
+    -- Commit the transaction
+    COMMIT;
+EXCEPTION
+    WHEN insufficient_funds THEN
+        -- Log insufficient funds error
+        LogError('Insufficient funds in account ' || p_from_account_id);
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20001, 'Insufficient funds in account ' || p_from_account_id);
+    WHEN OTHERS THEN
+        -- Log any other errors
+        LogError(SQLERRM);
+        ROLLBACK;
+        RAISE;
+END SafeTransferFunds;
+Case 2: Manage errors when updating employee salaries.
+Question: Write a stored procedure UpdateSalary that increases the salary of an employee by a given percentage. If the employee ID does not exist, handle the exception and log an error message
+CODE :
+CREATE OR REPLACE PROCEDURE UpdateSalary (
+    p_employee_id IN EMPLOYEES.EMPLOYEE_ID%TYPE,
+    p_percentage IN NUMBER
+) IS
+    v_salary EMPLOYEES.SALARY%TYPE;
+        -- Procedure to log errors
+    PROCEDURE LogError(p_error_message IN VARCHAR2) IS
+    BEGIN
+        INSERT INTO ERROR_LOG (LOG_ID, ERROR_MESSAGE, LOG_DATE)
+        VALUES (ERROR_LOG_SEQ.NEXTVAL, p_error_message, SYSDATE);
+    END LogError;
+   BEGIN
+    -- Select the current salary of the employee
+    SELECT SALARY INTO v_salary
+    FROM EMPLOYEES
+    WHERE EMPLOYEE_ID = p_employee_id;
+    -- Update the salary by the given percentage
+    UPDATE EMPLOYEES
+    SET SALARY = SALARY * (1 + p_percentage / 100)
+    WHERE EMPLOYEE_ID = p_employee_id;
+        -- Commit the transaction
+    COMMIT;
+    EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        -- Log error if employee ID does not exist
+        LogError('Employee ID ' || p_employee_id || ' does not exist.');
+        RAISE_APPLICATION_ERROR(-20001, 'Employee ID ' || p_employee_id || ' does not exist.'); 
+    WHEN OTHERS THEN
+        -- Log any other errors
+        LogError(SQLERRM);
+        ROLLBACK;
+        RAISE;
+END UpdateSalary;
+Case 3: Ensure data integrity when adding a new customer.
+o Question: Write a stored procedure AddNewCustomer that inserts a new customer into the Customers table. If a customer with the same ID already exists, handle the exception by logging an error and preventing the insertion.
+CODE :
+CREATE OR REPLACE PROCEDURE AddNewCustomer (
+    p_customer_id IN CUSTOMERS.CUSTOMER_ID%TYPE,
+    p_customer_name IN CUSTOMERS.CUSTOMER_NAME%TYPE,
+    p_date_of_birth IN CUSTOMERS.DATE_OF_BIRTH%TYPE
+) IS
+    -- Procedure to log errors
+    PROCEDURE LogError(p_error_message IN VARCHAR2) IS
+    BEGIN
+        INSERT INTO ERROR_LOG (LOG_ID, ERROR_MESSAGE, LOG_DATE)
+        VALUES (ERROR_LOG_SEQ.NEXTVAL, p_error_message, SYSDATE);
+    END LogError;
+BEGIN
+    -- Attempt to insert the new customer
+    INSERT INTO CUSTOMERS (CUSTOMER_ID, CUSTOMER_NAME, DATE_OF_BIRTH)
+    VALUES (p_customer_id, p_customer_name, p_date_of_birth);  
+    -- Commit the transaction
+    COMMIT;
+EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        -- Log error if customer with the same ID already exists
+        LogError('Customer ID ' || p_customer_id || ' already exists.');
+        RAISE_APPLICATION_ERROR(-20001, 'Customer ID ' || p_customer_id || ' already exists.');
+    WHEN OTHERS THEN
+        -- Log any other errors
+        LogError(SQLERRM);
+        ROLLBACK;
+        RAISE;
+END AddNewCustomer;
+
+
+

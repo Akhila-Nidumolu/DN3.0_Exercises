@@ -1,0 +1,110 @@
+Case 1: The bank needs to process monthly interest for all savings accounts.
+o Question: Write a stored procedure ProcessMonthlyInterest that calculates and updates the balance of all savings accounts by applying an interest rate of 1% to the current balance.
+CODE :
+CREATE OR REPLACE PROCEDURE ProcessMonthlyInterest IS
+    CURSOR savings_accounts_cursor IS
+        SELECT ACCOUNT_ID, BALANCE
+        FROM SAVINGS_ACCOUNTS
+        FOR UPDATE OF BALANCE;
+    v_account_id SAVINGS_ACCOUNTS.ACCOUNT_ID%TYPE;
+    v_balance SAVINGS_ACCOUNTS.BALANCE%TYPE;
+    v_new_balance SAVINGS_ACCOUNTS.BALANCE%TYPE;
+    v_interest_rate CONSTANT NUMBER := 0.01;  -- 1% interest rate
+BEGIN
+    FOR account_rec IN savings_accounts_cursor LOOP
+        v_account_id := account_rec.ACCOUNT_ID;
+        v_balance := account_rec.BALANCE;
+        -- Calculate new balance by applying the interest rate
+        v_new_balance := v_balance * (1 + v_interest_rate);
+        -- Update the account balance
+        UPDATE SAVINGS_ACCOUNTS
+        SET BALANCE = v_new_balance
+        WHERE CURRENT OF savings_accounts_cursor;
+    END LOOP;
+    -- Commit the changes
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Rollback in case of an error
+        ROLLBACK;
+        RAISE;
+Case 2: The bank wants to implement a bonus scheme for employees based on their performance.
+o Question: Write a stored procedure UpdateEmployeeBonus that updates the salary of employees in a given department by adding a bonus percentage passed as a parameter.
+
+CODE : CREATE OR REPLACE PROCEDURE UpdateEmployeeBonus (
+    p_department_id IN EMPLOYEES.DEPARTMENT_ID%TYPE,
+    p_bonus_percentage IN NUMBER
+) IS
+    v_salary EMPLOYEES.SALARY%TYPE;
+    v_bonus_amount NUMBER;
+BEGIN
+    -- Loop through all employees in the specified department
+    FOR emp_rec IN (SELECT EMPLOYEE_ID, SALARY
+                    FROM EMPLOYEES
+                    WHERE DEPARTMENT_ID = p_department_id) LOOP
+        -- Calculate the bonus amount
+        v_bonus_amount := emp_rec.SALARY * (p_bonus_percentage / 100);
+        -- Update the employee's salary by adding the bonus amount
+        UPDATE EMPLOYEES
+        SET SALARY = SALARY + v_bonus_amount
+        WHERE EMPLOYEE_ID = emp_rec.EMPLOYEE_ID;
+    END LOOP;
+        -- Commit the changes
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Rollback in case of an error
+        ROLLBACK;
+        RAISE;
+END UpdateEmployeeBonus;
+Case 3: Customers should be able to transfer funds between their accounts.
+o Question: Write a stored procedure TransferFunds that transfers a specified amount from one account to another, checking that the source account has sufficient balance before making the transfer.
+CODE :
+CREATE OR REPLACE PROCEDURE TransferFunds (
+    p_from_account_id IN ACCOUNTS.ACCOUNT_ID%TYPE,
+    p_to_account_id IN ACCOUNTS.ACCOUNT_ID%TYPE,
+    p_amount IN NUMBER
+) IS
+    v_from_balance ACCOUNTS.BALANCE%TYPE;
+    v_to_balance ACCOUNTS.BALANCE%TYPE;
+    -- Custom exception for insufficient funds
+    insufficient_funds EXCEPTION;
+    PRAGMA EXCEPTION_INIT(insufficient_funds, -20001);
+BEGIN
+    -- Lock the rows for both accounts to prevent concurrent updates
+    SELECT BALANCE INTO v_from_balance
+    FROM ACCOUNTS
+    WHERE ACCOUNT_ID = p_from_account_id
+    FOR UPDATE;
+        SELECT BALANCE INTO v_to_balance
+    FROM ACCOUNTS
+    WHERE ACCOUNT_ID = p_to_account_id
+    FOR UPDATE;
+        -- Check if the source account has sufficient funds
+    IF v_from_balance < p_amount THEN
+        RAISE insufficient_funds;
+    END IF;
+        -- Perform the fund transfer
+    UPDATE ACCOUNTS
+    SET BALANCE = BALANCE - p_amount
+    WHERE ACCOUNT_ID = p_from_account_id;
+    UPDATE ACCOUNTS
+    SET BALANCE = BALANCE + p_amount
+    WHERE ACCOUNT_ID = p_to_account_id;
+     -- Commit the transaction
+    COMMIT;
+   EXCEPTION
+    WHEN insufficient_funds THEN
+        -- Handle insufficient funds
+        RAISE_APPLICATION_ERROR(-20001, 'Insufficient funds in account ' || p_from_account_id);
+    WHEN NO_DATA_FOUND THEN
+        -- Handle cases where one of the accounts does not exist
+        RAISE_APPLICATION_ERROR(-20002, 'One or both account IDs are invalid.');
+    WHEN OTHERS THEN
+        -- Handle any other unexpected errors
+        ROLLBACK;
+        RAISE;
+END TransferFunds;
+
+
+

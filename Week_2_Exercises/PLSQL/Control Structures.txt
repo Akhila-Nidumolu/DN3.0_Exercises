@@ -1,0 +1,99 @@
+﻿CONTROLL STRUCTURE
+
+case 1: The bank wants to apply a discount to loan interest rates for customers above 60 years old.
+Question: Write a PL/SQL block that loops through all customers, checks their age, and if they are above 60, apply a 1% discount to their current loan interest rates.
+CODE
+DECLARE
+    CURSOR cust_cursor IS
+        SELECT c.CUSTOMER_ID, c.DATE_OF_BIRTH, l.LOAN_ID, l.INTEREST_RATE
+        FROM CUSTOMERS c
+        JOIN LOANS l ON c.CUSTOMER_ID = l.CUSTOMER_ID;
+        
+    v_customer_id CUSTOMERS.CUSTOMER_ID%TYPE;
+    v_date_of_birth CUSTOMERS.DATE_OF_BIRTH%TYPE;
+    v_loan_id LOANS.LOAN_ID%TYPE;
+    v_interest_rate LOANS.INTEREST_RATE%TYPE;
+    v_new_interest_rate LOANS.INTEREST_RATE%TYPE;
+    v_age NUMBER;
+BEGIN
+    FOR cust_rec IN cust_cursor LOOP
+        -- Calculate age
+        v_age := TRUNC((SYSDATE - cust_rec.DATE_OF_BIRTH) / 365.25);
+        
+        IF v_age > 60 THEN
+            -- Apply a 1% discount to the current interest rate
+            v_new_interest_rate := cust_rec.INTEREST_RATE * 0.99;
+            
+            -- Update the loan's interest rate
+            UPDATE LOANS
+            SET INTEREST_RATE = v_new_interest_rate
+            WHERE LOAN_ID = cust_rec.LOAN_ID;
+        END IF;
+    END LOOP;
+
+    -- Commit the changes
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Rollback in case of an error
+        ROLLBACK;
+        RAISE;
+END;
+
+case 2: A customer can be promoted to VIP status based on their balance.
+o Question: Write a PL/SQL block that iterates through all customers and sets a flag IsVIP to TRUE for those with a balance over $10,000.
+CODE :
+DECLARE
+    CURSOR cust_cursor IS
+        SELECT CUSTOMER_ID, BALANCE
+        FROM CUSTOMERS;
+        
+    v_customer_id CUSTOMERS.CUSTOMER_ID%TYPE;
+    v_balance CUSTOMERS.BALANCE%TYPE;
+BEGIN
+    FOR cust_rec IN cust_cursor LOOP
+        IF cust_rec.BALANCE > 10000 THEN
+            -- Set IsVIP flag to TRUE
+            UPDATE CUSTOMERS
+            SET IsVIP = 'TRUE'
+            WHERE CUSTOMER_ID = cust_rec.CUSTOMER_ID;
+        END IF;
+    END LOOP;
+
+    -- Commit the changes
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Rollback in case of an error
+        ROLLBACK;
+        RAISE;
+END;
+ 
+
+case 3: The bank wants to send reminders to customers whose loans are due within the next 30 days.
+o Question: Write a PL/SQL block that fetches all loans due in the next 30 days and prints a reminder message for each customer.
+
+CODE :
+DECLARE
+    CURSOR due_loans_cursor IS
+        SELECT l.CUSTOMER_ID, l.LOAN_ID, l.DUE_DATE, c.CUSTOMER_NAME
+        FROM LOANS l
+        JOIN CUSTOMERS c ON l.CUSTOMER_ID = c.CUSTOMER_ID
+        WHERE l.DUE_DATE BETWEEN SYSDATE AND SYSDATE + 30;
+        
+    v_customer_id LOANS.CUSTOMER_ID%TYPE;
+    v_loan_id LOANS.LOAN_ID%TYPE;
+    v_due_date LOANS.DUE_DATE%TYPE;
+    v_customer_name CUSTOMERS.CUSTOMER_NAME%TYPE;
+BEGIN
+    FOR due_loan_rec IN due_loans_cursor LOOP
+        v_customer_id := due_loan_rec.CUSTOMER_ID;
+        v_loan_id := due_loan_rec.LOAN_ID;
+        v_due_date := due_loan_rec.DUE_DATE;
+        v_customer_name := due_loan_rec.CUSTOMER_NAME;
+        
+        -- Print reminder message
+        DBMS_OUTPUT.PUT_LINE('Reminder: Dear ' || v_customer_name || ', your loan with ID ' || v_loan_id || ' is due on ' || TO_CHAR(v_due_date, 'DD-MON-YYYY') || '.');
+    END LOOP;
+END;
+
