@@ -1,0 +1,66 @@
+BookRepository.java:
+package com.library.repository;
+
+public class BookRepository {
+    public void save(String bookName) {
+        // Simulate saving the book to a database
+        System.out.println("Saving book: " + bookName);
+    }
+}
+___________________________________________________________________________________________________
+BookService.java:
+
+package com.library.service;
+
+import com.library.repository.BookRepository;
+
+public class BookService {
+    private BookRepository bookRepository;
+
+    // Setter for dependency injection
+    public void setBookRepository(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
+    }
+
+    public void addBook(String bookName) {
+        bookRepository.save(bookName);
+    }
+}
+___________________________________________________________________________________________________
+LibraryManagementApplication.java:
+package com.library;
+
+import com.library.service.BookService;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+public class LibraryManagementApplication {
+    public static void main(String[] args) {
+        // Load the Spring context
+        ApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+
+        // Get the BookService bean
+        BookService bookService = (BookService) context.getBean("bookService");
+
+        // Test the configuration
+        bookService.addBook("The Great Gatsby");
+    }
+}
+___________________________________________________________________________________________________
+pom.xml:
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.library</groupId>
+  <artifactId>LibraryManagement</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+      <version>5.3.10</version>
+    </dependency>
+  </dependencies>
+</project>

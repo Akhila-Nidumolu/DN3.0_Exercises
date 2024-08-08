@@ -1,0 +1,90 @@
+LoggingAspect.java:
+package com.library.aspect;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+public class LoggingAspect {
+
+    @Before("execution(* com.library.service.BookService.addBook(..))")
+    public void logBefore(JoinPoint joinPoint) {
+        System.out.println("Before method: " + joinPoint.getSignature().getName());
+    }
+
+    @After("execution(* com.library.service.BookService.addBook(..))")
+    public void logAfter(JoinPoint joinPoint) {
+        System.out.println("After method: " + joinPoint.getSignature().getName());
+    }
+}
+___________________________________________________________________________________________
+BookRepository.java:
+package com.library.repository;
+
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class BookRepository {
+
+    public void save(String bookTitle) {
+        // Logic to save the book title (e.g., to a database)
+        System.out.println("Book saved: " + bookTitle);
+    }
+}
+___________________________________________________________________________________________
+BookService.java:
+package com.library.service;
+
+import com.library.repository.BookRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class BookService {
+
+    private BookRepository bookRepository;
+
+    // Constructor injection
+    @Autowired
+    public BookService(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
+    }
+
+    // Setter injection (optional, not required if using constructor injection)
+    @Autowired
+    public void setBookRepository(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
+    }
+
+    // Example method
+    public void addBook(String bookTitle) {
+        // Logic to add a book
+        System.out.println("Adding book: " + bookTitle);
+    }
+}
+___________________________________________________________________________________________
+LibraryManagementApplication.java:
+package com.library;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import com.library.service.BookService;
+
+public class LibraryManagementApplication {
+    public static void main(String[] args) {
+        // Load the Spring context
+        ApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+
+        // Retrieve the BookService bean
+        BookService bookService = context.getBean(BookService.class);
+
+        // Call methods on the bookService to verify the logging aspect
+        bookService.addBook("Spring in Action");
+
+        System.out.println("Library Management Application is running with AOP logging.");
+    }
+}
